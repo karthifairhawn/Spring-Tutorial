@@ -1,0 +1,321 @@
+# Spring Boot JPA
+
+----
+
+###Downloaded template from spring initializer with 
+    1. Dev Tools
+    2. JPA
+    3. Web
+    3. Lombok
+    4. Postgres Driver
+    
+**Using maven build tool and IntelliJ**
+
+----
+
+Step 1 : Setup DB connection
+
+**In application.properties**
+
+    spring.jpa.hibernate.ddl-auto=update
+    spring.datasource.url=jdbc:postgresql://localhost:5432/postgres
+    spring.datasource.username=postgres
+    spring.datasource.password=toor
+    spring.jpa.show-sql: true
+    spring.datasource.driver-class-name=org.postgresql.jdbc.Driver
+
+---
+Step 2: Mapping Entity
+ 
+**1.Studnet entity mapping.**
+
+    @Entity
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public class Student {
+    
+        @Id
+        private long StudentID;
+        private String Name;
+        private String firstName;
+        private String lastName;
+        private String emailId;
+        private String guardianName;
+        private String guardianEmail;
+        private String guardianMobile;
+    }
+---
+
+**2.Studnet entity mapping.**
+
+    @Entity
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    @Table (
+    name = "student_tbl",
+    uniqueConstraints = @UniqueConstraint(
+    name = "email_unique",
+    columnNames = "email_address"
+    )
+    )
+    public class Student {
+    
+        @Id
+        @SequenceGenerator(
+                name="StudentID_Seq",
+                sequenceName="Student_Seq",
+                allocationSize = 1
+        )
+        @GeneratedValue(
+                strategy = GenerationType.SEQUENCE,
+                generator = "Student_Seq"
+        )
+        private long StudentID;
+    
+    
+        private String Name;
+        private String firstName;
+        private String lastName;
+    
+        @Column(
+                name="email_address",
+                nullable = false
+                )
+        private String emailId;
+    
+        private String guardianName;
+        private String guardianEmail;
+        private String guardianMobile;
+    }
+
+---
+
+3. Creating Repository
+
+
+    @Repository
+    public interface StudentRepository extends JpaRepository<Student,Long> {
+    
+    }
+
+The extended JpaRepository contains methods that will automatically performs CRUD operations to the DB
+
+---
+
+4. Testing StudentRepository
+
+
+    @SpringBootTest
+    class StudentRepositoryTest {
+
+        @Autowired
+        private StudentRepository studentRepository;
+    
+        @Test
+        public void saveStudent() throws Exception {
+            Student student = Student.builder().
+                                firstName("Karthick").lastName("B").emailId("kfh@gmail.com").guardianEmail("hackerkarthi@gmail.com").
+                                guardianMobile("9999999999").guardianName("Guardian").build();
+            studentRepository.save(student);
+        }
+
+        @Test
+        public void findAll() throws Exception {
+            List<Student> students = studentRepository.findAll();
+            System.out.println("All Students :" + students);
+        }
+    }
+
+---
+
+5. Embedded and Embeddedable
+
+We can achieve many obj to one table using embedded and Embeddedable annotations.
+
+    // In Student class add @Embedded
+
+    class Student{
+    ...
+        @Embedded
+        Guardian guardian;
+    ...
+    }
+
+    // In Guardian class add @Embeddedable
+    
+    @Embeddedable
+    class Guardian{ ... }
+
+---
+6.JPA Querying Methods
+
+Repository Method Samples : https://docs.spring.io/spring-data/jpa/docs/current/reference/html/#jpa.query-methods.query-creation
+
+---
+7.Query through JPA (JPQL)
+
+>Decalare function with variable need to be used in query.
+> 
+>Add the query above the function defition in Repo interface using @Query("q") annotation.
+
+Example:
+
+In Repo:
+
+    //Example 1
+
+    @Query("select s from Student s where s.lastName = ?1")
+    Student getStudentByAboveQuery(String lastName);
+
+    //Example 2
+
+    @Query("select s.lastName from Student s where s.firstName = ?1")
+    String getStudentByAboveQuery2(String firstName);
+
+Implementation:
+
+    @Test
+    public void getStudentByAboveQuery(){
+        Student s = studentRepository.getStudentByAboveQuery("Bro");
+        System.out.println(s);
+    }
+
+    @Test
+    public void getStudentByAboveQuery2(){
+        String s = studentRepository.getStudentByAboveQuery2("Karthi");
+        System.out.println(s);
+    }
+
+---
+8.Native Query
+
+In Repo:
+
+    @Query(
+    value = "SELECT * FROM public.student_tbl where student_tbl.email_address = ?1",
+    nativeQuery = true
+    )
+    Student getStudentByEmailNativeQuery(String emailId);
+
+Implementation:
+    
+    @Test
+    public void getStudentByEmailNativeQuery(){
+        Student s = studentRepository.getStudentByEmailNativeQuery("321@gmail.com");
+        System.out.println(s);
+    }
+
+8a.Named Param in Native Query
+
+In Repo:
+
+    @Query(
+    value = "SELECT * FROM public.student_tbl where student_tbl.email_address = :emailId",
+    nativeQuery = true
+    )
+    Student getStudentByEmailNativeNamedParam(@Param("emailId") String emailId);
+
+Implementation:
+    
+    @Test
+    public void getStudentByEmailNativeNamedParam(){
+        Student s = studentRepository.getStudentByEmailNativeNamedParam("321@gmail.com");
+        System.out.println(s);
+    }
+---
+
+9.Update value in db (@Modifying and @Transactional)
+
+In Repo:
+    
+    @Modifying
+    @Transactional
+    @Query(
+    value="UPDATE public.student_tbl SET first_name=?1 where student_tbl.email_address=?2",
+    nativeQuery = true
+    )
+    int updateStudentFirstNameByEmail(String firstName,String emailId);
+
+Implementation:
+
+    @Test
+    public void updateStudentFirstNameByEmail(){
+        int x = studentRepository.updateStudentFirstNameByEmail("karthi","321@gmail.com");
+        System.out.println(x);
+    }
+    
+
+
+---
+
+10. OneToOne Relationship (Course(parent) to CourseMaterial(child))
+
+
+Course 1:
+
+
+	public class Course {
+
+	    @Id
+	    @GeneratedValue(strategy = GenerationType.AUTO)
+	    private Long courseId;
+	    private String title;
+	    private Integer credit;
+	
+	    @OneToOne(
+	        mappedBy = "course"
+	    )
+	    private CourseMaterial courseMaterial;
+	}
+	
+
+
+CourseMaterial 2:
+
+	public class CourseMaterial {
+
+	    @Id
+	    @GeneratedValue(strategy = GenerationType.AUTO)
+	    private Long courseMaterialId;
+	    private String URL;
+	
+	    @OneToOne(
+	        cascade = CascadeType.ALL,
+	        fetch = FetchType.LAZY
+	    )
+	
+	    @JoinColumn(
+	        name = "course_id",
+	        referencedColumnName = "courseId"
+	    )
+	    private Course course;
+	}	
+
+
+---
+
+11.One to Many Relationship (Teacher to Course(many))
+
+
+Teacher :
+
+
+	public class Teacher {
+    @Id
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    private Long teacherId;
+    private String teacherName;    
+
+    @OneToMany(
+        cascade = CascadeType.ALL
+    )
+    @JoinColumn(
+        name = "teacher_id",
+        referencedColumnName="teacherId"
+    )
+    private List<Course> courses;
+	}

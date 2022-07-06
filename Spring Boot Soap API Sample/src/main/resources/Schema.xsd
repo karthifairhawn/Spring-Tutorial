@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema 
+xmlns:xs="http://www.w3.org/2001/XMLSchema"
+targetNamespace="http://karthifairhawn.in/emp"
+xmlns:tns="http://karthifairhawn.in/emp"
+elementFormDefault="qualified">
+	
+	<xs:element name="GetEmployeeDetailsRequest">		
+        <xs:complexType>
+			<xs:sequence>
+				<xs:element name="id" type="xs:int"></xs:element>
+			</xs:sequence>
+		</xs:complexType>
+    </xs:element>
+	
+	<xs:element name="GetEmployeeDetailsResponse">		
+        <xs:complexType>
+			<xs:sequence>
+				<xs:element name="EmpDetails" type="tns:EmpDetails"/>
+			</xs:sequence>
+		</xs:complexType>
+    </xs:element>
+    
+    <xs:element name="DeleteEmployeeDetailsRequest">		
+        <xs:complexType>
+			<xs:sequence>
+				<xs:element name="id" type="xs:int"></xs:element>
+			</xs:sequence>
+		</xs:complexType>
+    </xs:element>
+	
+	<xs:element name="DeleteEmployeeDetailsResponse">		
+        <xs:complexType>
+			<xs:sequence>
+				<xs:element name="id" type="xs:int"></xs:element>
+			</xs:sequence>
+		</xs:complexType>
+    </xs:element>
+	
+	<xs:element name="GetAllEmployeeDetailsRequest">		
+		<xs:complexType></xs:complexType>
+    </xs:element>
+	
+	<xs:element name="GetAllEmployeeDetailsResponse">		
+        <xs:complexType>
+			<xs:sequence>
+				<xs:element name="EmpDetails" type="tns:EmpDetails" maxOccurs="unbounded"/>
+			</xs:sequence>
+		</xs:complexType>
+    </xs:element>
+	<xs:complexType name="EmpDetails">
+		<xs:sequence>
+			<xs:element name="id" type="xs:int"/>
+			<xs:element name="name" type="xs:string" />
+			<xs:element name="age" type="xs:int" />
+			<xs:element name="city" type="xs:string" />
+		</xs:sequence>
+	</xs:complexType>
+	
+	
+</xs:schema>
