@@ -99,6 +99,10 @@ public class SpringSecurityConfig  extends WebSecurityConfigurerAdapter {
 
 ```
 
+## Spring security architecture
+
+![image info](./Images/authentication.png)
+
 
 
 
