@@ -6,9 +6,19 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class APIService {
     
-    @GetMapping("/api")
+    @GetMapping("/all")
     public String homepage() {
         return "Hello World!";
+    }
+
+    @GetMapping("/user")
+    public String homepage1() {
+        return "User and admin can access";
+    }
+
+    @GetMapping("/all")
+    public String homepage2() {
+        return "Only admin area";
     }
     
 }
