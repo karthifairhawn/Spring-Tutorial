@@ -16,7 +16,7 @@ public class APIService {
         return "User and admin can access";
     }
 
-    @GetMapping("/all")
+    @GetMapping("/admin")
     public String homepage2() {
         return "Only admin area";
     }

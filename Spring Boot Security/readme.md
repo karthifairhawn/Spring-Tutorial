@@ -24,10 +24,10 @@ spring.security.user.name = new_user_name
 spring.security.user.password = new_pass_word
 ```
 
-## Inmemory User details using WebSecurityConfigurer Adapter
+## Inmemory User details using WebSecurityConfigurer Adapter (Authentication)
 
 - Extend the class WebSecurityConfigurerAdapter.
-- Override the configure method.
+- Override the configure method with "AuthenticationManagerBuilder" argument.
 - Configure auth variable to use in memory auth with some user and password.
 - Create a password enoder bean with spring expects to hash passwords.
 - Use @EnableWebSecurity annotation to show this class is configuration of security.
@@ -40,9 +40,13 @@ public class SpringSecurityConfig  extends WebSecurityConfigurerAdapter {
     protected void configure(AuthenticationManagerBuilder auth) throws Exception {
         // super.configure(auth);
         auth.inMemoryAuthentication()
-            .withUser("karthi")
+            .withUser("admin")
             .password("shadow12")
-            .roles("USER");
+            .roles("Admin")
+            .and()
+            .withUser("user")
+            .password("shadow12")
+            .roles("User");
     }
 
     @Bean 
@@ -50,6 +54,49 @@ public class SpringSecurityConfig  extends WebSecurityConfigurerAdapter {
         return NoOpPasswordEncoder.getInstance();
     }
 }
+```
+
+
+## Authorisation with diffirent roles
+
+- Override the configure method with "HttpSecurity" argument.
+- Configure the parameter for diffirent roles with diffirent endpoints
+
+
+```
+@EnableWebSecurity
+public class SpringSecurityConfig  extends WebSecurityConfigurerAdapter {
+
+    @Override
+    protected void configure(AuthenticationManagerBuilder auth) throws Exception {
+        // super.configure(auth);
+        auth.inMemoryAuthentication()
+            .withUser("admin")
+            .password("shadow12")
+            .roles("Admin")
+            .and()
+            .withUser("user")
+            .password("shadow12")
+            .roles("User");
+    }
+
+    
+    @Bean 
+    public PasswordEncoder getPasswordEncoder() {
+        return NoOpPasswordEncoder.getInstance();
+    }
+
+
+    // Authorisation part
+
+    @Override
+    protected void configure(HttpSecurity http) throws Exception {        
+        http.authorizeRequests()
+            .antMatchers("/**").hasAnyRole("Admin").and().formLogin();
+    }
+
+}
+
 ```
 
 
