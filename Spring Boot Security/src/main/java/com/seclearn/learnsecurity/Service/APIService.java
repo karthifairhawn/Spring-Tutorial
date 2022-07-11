@@ -6,9 +6,9 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class APIService {
     
-    @GetMapping("/all")
+    @GetMapping("/")
     public String homepage() {
-        return "Hello World!";
+        return "Guest user!";
     }
 
     @GetMapping("/user")
