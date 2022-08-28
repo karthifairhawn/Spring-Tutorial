@@ -1,7 +1,5 @@
 # Spring Security with JWT
 
-
-
 ### Step 1:  Project Setup
 
 Setup a simple project with spring security with an in memory or any user details provider.
@@ -11,21 +9,18 @@ Setup a simple project with spring security with an in memory or any user detail
 ### Step 2: Add dependency
 
 ```xml
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt</artifactId>
+            <version>0.9.1</version>
+        </dependency>
 
-		<dependency>
-			<groupId>io.jsonwebtoken</groupId>
-			<artifactId>jjwt</artifactId>
-			<version>0.9.1</version>
-		</dependency>
-
-		<!-- https://mvnrepository.com/artifact/javax.xml.bind/jaxb-api -->
-		<dependency>
-			<groupId>javax.xml.bind</groupId>
-			<artifactId>jaxb-api</artifactId>
-			<version>2.3.0</version>
-		</dependency>
-
-
+        <!-- https://mvnrepository.com/artifact/javax.xml.bind/jaxb-api -->
+        <dependency>
+            <groupId>javax.xml.bind</groupId>
+            <artifactId>jaxb-api</artifactId>
+            <version>2.3.0</version>
+        </dependency>
 ```
 
 ---
@@ -33,6 +28,8 @@ Setup a simple project with spring security with an in memory or any user detail
 ### Step 3: JWT Configuration
 
 Create a jwt class in a package named like Util for the configuration of JWT.
+
+This util package is reposible for creating new jwt with key for new request
 
 ```java
 package com.jwt.JWT.Util;
@@ -115,9 +112,7 @@ public class JwtUtil {
 
 For the above end point to work we need to autowire the JwtUtil class and authentication manager too.
 
-
-
-*Create the AuthenticationManager function  in the security config class with extends webSecurityConfigurerAdapter*
+*Override the AuthenticationManager function  in the security config class which extends webSecurityConfigurerAdapter*
 
 ```java
     @Override
@@ -127,9 +122,7 @@ For the above end point to work we need to autowire the JwtUtil class and authen
     }
 ```
 
-
-
-Remeber to allow all request without security to the above endpoint.
+Remeber to allow all request without security to the auth endpoint.
 
 ```java
     @Override
@@ -147,12 +140,16 @@ Remeber to allow all request without security to the above endpoint.
 
 ### Step 4: Test endpoint.
 
+Once the dispatcher servlet recieves request then the auth endpoint will be triggered where the username and password is validated.
+
+If the credentials are valid a JWT is returned as below.
+
 Request
 
 ```json
 {
-	"username" : "admin",
-	"password" : "admin"
+    "username" : "admin",
+    "password" : "admin"
 }
 ```
 
@@ -166,6 +163,107 @@ Response
 
 ---
 
- 
+### Step 5: Adding Filter (oncePerRequestFilter)
+
+We have to create a filter to inctercept the incoming request and to configure spring security to allow that request if that has a valid JWT.
 
 
+
+**Dependencies**
+
+    - Our UserDetailsService  -
+
+    - JWT util Class 
+
+
+
+If the header got a valid jwt spring sec will be cofigured and set in context.
+
+```java
+package com.jwt.JWT.Filters;
+
+import java.io.IOException;
+
+import javax.servlet.FilterChain;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
+import org.springframework.stereotype.Component;
+import org.springframework.web.filter.OncePerRequestFilter;
+
+import com.jwt.JWT.Services.MyUserDetailsService;
+import com.jwt.JWT.Util.JwtUtil;
+
+@Component
+public class JwtRequestFilter extends OncePerRequestFilter{
+
+    @Autowired
+    private MyUserDetailsService myUserDetailsService;
+
+    @Autowired
+    private JwtUtil jwtUtil;
+
+    @Override
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+            throws ServletException, IOException {        
+                final String authorizationHeader = request.getHeader("Authorization");
+
+        String username = null;
+        String jwt = null;
+
+        if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
+            jwt = authorizationHeader.substring(7);
+            username = jwtUtil.extractUsername(jwt);
+        }
+
+
+        if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+
+            UserDetails userDetails = this.myUserDetailsService.loadUserByUsername(username);
+
+            if (jwtUtil.validateToken(jwt, userDetails)) {
+
+                UsernamePasswordAuthenticationToken usernamePasswordAuthenticationToken = new UsernamePasswordAuthenticationToken(
+                        userDetails, null, userDetails.getAuthorities());
+                usernamePasswordAuthenticationToken
+                        .setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                SecurityContextHolder.getContext().setAuthentication(usernamePasswordAuthenticationToken);
+            }
+        }
+        filterChain.doFilter(request, response);
+        
+    }
+
+    
+    
+}
+
+```
+
+### Step 6: Configuring Spring Sec with that Filter
+
+```java
+    @Override
+    protected void configure(HttpSecurity http) throws Exception {        
+        http.csrf().disable();
+        http.authorizeRequests()
+            .antMatchers("/auth").permitAll()
+            .anyRequest().authenticated()
+            .and().formLogin()
+            .and().httpBasic()
+            .and().sessionManagement()
+            .sessionCreationPolicy(SessionCreationPolicy.STATELESS);
+
+            http.addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
+    }
+```
+
+1. By setting the session creation policy the sessions will be no longer managed
+
+2. addFiltersBefore accepts our filter which is being autowired to that class.
